@@ -35,7 +35,7 @@ git remote -v
 
 ---
 
-### 2) How to create a new branch for yourself to play with
+### 2) How to create a new branch for yourself
 ```bash
 # Make sure your local main is up to date
 git fetch origin                            # download latest refs
