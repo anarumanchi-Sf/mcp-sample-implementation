@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+  xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:db="http://www.mulesoft.org/schema/mule/db"
+  xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+  xmlns:http="http://www.mulesoft.org/schema/mule/http"
+  xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp"
+  xsi:schemaLocation="
+    http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+    http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+    http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+    http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+
+  <flow name="mcp-get-customer-details-flow" doc:id="2f3e4b5a-7c8d-4e9a-9b1c-2f3e4b5a7c8d">
+
+    <!-- MCP tool listener: arguments come in payload as a Map -->
+    <mcp:tool-listener
+        doc:name="Get Customer Details Tool"
+        doc:id="a9b3f1d4-5c4e-4b6b-8baf-5b8e2f3b2e8d"
+        config-ref="MCP_Streamable_Config"
+        name="getCustomerDetails">
+      <mcp:description><![CDATA[Retrieve customer details from Oracle database by customer ID]]></mcp:description>
+
+      <mcp:parameters-schema>
+        <![CDATA[
+        {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "description": "The unique identifier for the customer"
+            }
+          },
+          "required": ["customerId"]
+        }
+        ]]>
+      </mcp:parameters-schema>
+
+      <!-- Use a supported response content element -->
+      <mcp:responses>
+        <mcp:text-tool-response-content text="#[write(payload, 'application/json')]"/>
+      </mcp:responses>
+
+      <!-- Optional: ensure JSON is returned even on errors -->
+      <mcp:on-error-responses>
+        <mcp:text-tool-response-content text="#[write(payload, 'application/json')]"/>
+      </mcp:on-error-responses>
+    </mcp:tool-listener>
+
+    <!-- DB select uses payload.customerId from the tool arguments -->
+    <db:select
+        doc:name="Select Customer Details"
+        doc:id="b1d9c3e2-8a4d-4e9b-9c0f-1b9d3c6e2f4a"
+        config-ref="Oracle_DB_Config">
+      <db:sql><![CDATA[
+        SELECT
+          CustomerID, FirstName, LastName, Email, PhoneNumber, DateOfBirth,
+          StreetAddress, City, State, ZipCode, Country,
+          CreatedAt, UpdatedAt
+        FROM MYDB.CUSTOMER
+        WHERE CustomerID = :customerId
+      ]]></db:sql>
+      <db:input-parameters><![CDATA[#[{ customerId: payload.customerId }]]]></db:input-parameters>
+    </db:select>
+
+    <!-- Transform DB row to your JSON contract -->
+    <ee:transform doc:name="Convert to JSON" doc:id="c4d2f1b3-9a4f-4e6a-8b9d-1c3e2f4a6b7c">
+      <ee:message>
+        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if (sizeOf(payload) > 0)
+  {
+    customerId: payload[0].CustomerID,
+    firstName: payload[0].FirstName,
+    lastName: payload[0].LastName,
+    email: payload[0].Email,
+    phoneNumber: payload[0].PhoneNumber,
+    dateOfBirth: ((payload[0].DateOfBirth as Date) as String {format: "yyyy-MM-dd"}) default null,
+    address: {
+      street: payload[0].StreetAddress,
+      city: payload[0].City,
+      state: payload[0].State,
+      zipCode: payload[0].ZipCode,
+      country: payload[0].Country
+    },
+    createdAt: ((payload[0].CreatedAt as DateTime) as String {format: "yyyy-MM-dd'T'HH:mm:ss"}) default null,
+    updatedAt: ((payload[0].UpdatedAt as DateTime) as String {format: "yyyy-MM-dd'T'HH:mm:ss"}) default null
+  }
+else
+  {
+    error: "Customer not found",
+    customerId: (payload.customerId default null)
+  }]]></ee:set-payload>
+      </ee:message>
+    </ee:transform>
+
+    <error-handler>
+      <on-error-propagate enableNotifications="true" logException="true"
+                          doc:name="On Error Propagate"
+                          doc:id="d5f2e3b4-8c6d-4e7a-9b1c-2f3e4b5a7c8d">
+        <ee:transform doc:name="Error Response" doc:id="e6f3c4d5-9b2e-4f8a-9d1c-3e4f5b6a8c9d">
+          <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  error: "Unable to retrieve customer details"
+}]]></ee:set-payload>
+          </ee:message>
+        </ee:transform>
+      </on-error-propagate>
+    </error-handler>
+  </flow>
+
+  <!-- Temporary DB health check endpoint for connectivity validation -->
+  <flow name="db-health-check" doc:name="DB Health Check">
+    <http:listener config-ref="HTTP_Listener" path="/health/db" doc:name="HTTP Listener"/>
+    <db:select config-ref="Oracle_DB_Config" doc:name="Ping DB">
+      <db:sql><![CDATA[SELECT 1 AS OK FROM DUAL]]></db:sql>
+    </db:select>
+    <ee:transform doc:name="To JSON">
+      <ee:message>
+        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  ok: (payload[0].OK default payload[0]."1") default true
+}]]></ee:set-payload>
+      </ee:message>
+    </ee:transform>
+    <error-handler>
+      <on-error-propagate logException="true">
+        <ee:transform>
+          <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  error: error.description default error.message default "DB error"
+}]]></ee:set-payload>
+          </ee:message>
+        </ee:transform>
+      </on-error-propagate>
+    </error-handler>
+  </flow>
+
+</mule>

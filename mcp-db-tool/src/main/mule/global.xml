@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+  xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:db="http://www.mulesoft.org/schema/mule/db"
+  xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+  xmlns:http="http://www.mulesoft.org/schema/mule/http"
+  xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp"
+  xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+  http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+  http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+  http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd">
+  
+  <!-- Configuration Properties -->
+  <configuration-properties file="config.properties" doc:name="Configuration properties"/>
+  
+  <!-- HTTP Listener used by MCP server connection -->
+  <http:listener-config name="HTTP_Listener" doc:name="HTTP Listener">
+    <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+  </http:listener-config>
+
+  <!-- MCP Server Configuration -->
+  <mcp:server-config name="MCP_Streamable_Config" doc:name="MCP Streamable Config" serverName="${mcp.clientName}" serverVersion="${mcp.clientVersion}">
+    <mcp:streamable-http-server-connection listenerConfig="HTTP_Listener"/>
+  </mcp:server-config>
+  
+  <!-- Oracle Database Configuration (Generic JDBC to ensure driver resolution locally and in CH) -->
+  <db:config name="Oracle_DB_Config" doc:name="Oracle DB Config">
+    <db:generic-connection 
+        url="jdbc:oracle:thin:@//${db.host}:${db.port}/${db.serviceId}?internal_logon=SYSDBA"
+        driverClassName="oracle.jdbc.OracleDriver"
+        user="${db.user}"
+        password="${db.systemPassword}"/>
+  </db:config>
+  
+</mule> 

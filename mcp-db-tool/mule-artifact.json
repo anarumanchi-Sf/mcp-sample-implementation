@@ -1,0 +1,20 @@
+{
+  "name": "mcp-db-tool",
+  "minMuleVersion": "4.9.9",
+  "javaSpecificationVersions": [
+    "17"
+  ],
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [
+        "oracle.jdbc",
+        "oracle.jdbc.driver",
+        "oracle.jdbc.pool",
+        "oracle.sql",
+        "oracle.net"
+      ],
+      "exportedResources": []
+    }
+  }
+}
