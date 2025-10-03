@@ -1,12 +1,12 @@
-## Git Workflow: Clone, Branch & Commit, Merge into Main
+## Git Workflow
 
 Repo: https://github.com/anarumanchi-Sf/mcp-sample-implementation.git
 
 ---
 
-### 1) Clone this repository
+### 1) How to clone this repo over HTTPS and SSH
 
-#### Option A: HTTPS
+#### HTTPS
 ```bash
 # Clone the repo over HTTPS into a new folder
 git clone https://github.com/anarumanchi-Sf/mcp-sample-implementation.git
@@ -18,9 +18,9 @@ cd mcp-sample-implementation
 git remote -v
 ```
 
-#### Option B: SSH (requires SSH key configured on GitHub)
+#### SSH (requires SSH key configured on GitHub)
 ```bash
-# Verify SSH connectivity to GitHub
+# Verify SSH connectivity to GitHub (should print an auth success message)
 ssh -T git@github.com
 
 # Clone the repo over SSH into a new folder
@@ -35,68 +35,69 @@ git remote -v
 
 ---
 
-### 2) Make changes, see what changed, and commit them to a new branch
+### 2) How to create a new branch for yourself to play with
 ```bash
-# Download the latest remote refs without altering local files
-git fetch origin
-
-# Switch to the local main branch
-git switch main
-
-# Fast-forward local main to the latest origin/main
-git pull --ff-only
+# Make sure your local main is up to date
+git fetch origin                            # download latest refs
+git switch main                             # switch to local main
+git pull --ff-only                          # fast-forward to origin/main
 
 # Create a new branch from main and switch to it
-git switch -c feature/<short-description>
+git switch -c feature/<short-description>   # e.g., feature/add-order-tool
 
-# Show the working tree status (what’s modified/untracked)
-git status
-
-# Show unstaged diffs line-by-line
-git diff
-
-# Show diffs of currently staged files (if any)
-git diff --staged
-
-# Stage all changes recursively (or specify paths instead)
-git add .
-
-# Interactively pick and stage specific hunks
-git add -p
-
-# Commit staged changes with a clear message
-git commit -m "feat(mcp): add <what-you-added>"
-
-# Push the new branch to origin and set upstream tracking
+# (optional) Push the new branch and set upstream now
 git push -u origin feature/<short-description>
 ```
 
 ---
 
-### 3) Merge your changes into main
+### 3) Once changes are made, how to see the files changed and commit them to a new branch
+```bash
+# See what changed in your working tree
+git status                                   # modified/untracked files
+
+# Review unstaged diffs line-by-line
+git diff                                     # changes not yet staged
+
+# Review diffs for staged files
+git diff --staged                            # changes already staged
+
+# Stage changes (pick one pattern)
+git add .                                    # stage everything
+# or
+git add path/to/file1 path/to/file2          # stage specific files
+# or interactively pick hunks
+git add -p                                   # stage selected hunks
+
+# Commit staged changes with a clear message
+git commit -m "feat(mcp): add <what-you-added>"
+
+# Push your branch to GitHub (sets upstream if not already set)
+git push -u origin feature/<short-description>
+```
+
+---
+
+### 4) If you want to merge anything into the main branch, how to do it
 
 Preferred: Create a Pull Request (PR) on GitHub
 ```bash
 # On GitHub UI:
 # - Click “Compare & pull request” for your branch
 # - Base: main, Compare: your feature branch
-# - Add description (what/why/how to test), request reviewers, submit PR
+# - Describe what/why/how to test, request reviewers, submit PR
 # - After approvals and passing checks, click “Merge pull request”
 ```
 
 Alternative: Merge locally (when PRs aren’t required)
 ```bash
-# Fetch latest changes from the remote
-git fetch origin
+# Update local main
+git fetch origin                             # get latest remote
+git switch main                              # go to main locally
+git pull --ff-only                           # fast-forward main
 
-# Switch to local main branch
-git switch main
-
-# Fast-forward local main to latest origin/main
-git pull --ff-only
-
-# Merge the feature branch into main (creates merge commit if needed)
-git merge feature/<short-description>
+# Merge your feature branch into main
+git merge feature/<short-description>        # creates merge commit if needed
 
 # Push updated main to origin
 git push origin main
@@ -104,20 +105,13 @@ git push origin main
 
 Keep your feature branch up to date before merging (recommended)
 ```bash
-# Fetch latest state of main from origin
+# Rebase your feature branch on top of latest main for a clean history
 git fetch origin
-
-# Switch to your feature branch
 git switch feature/<short-description>
+git rebase origin/main                       # resolve conflicts if any
+git rebase --continue                        # continue after resolving
 
-# Replay your branch commits on top of latest main for a clean history
-git rebase origin/main
-
-# Continue rebase after resolving any conflicts
-git rebase --continue
-
-# Update the remote branch safely after rewriting history
+# If you rewrote history and already pushed, update remote safely
 git push --force-with-lease
 ```
-
 
